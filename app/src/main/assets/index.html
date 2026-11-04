@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Check-list SOS</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eaf7ec;color:#203526;font-family:Arial,sans-serif}
+header{background:#a5e6ae;color:#174b27;padding:22px 16px;text-align:center;border-bottom:3px solid #72c982}
+header h2{margin:5px 0;font-size:23px}
+header p{margin:8px 0 0;font-size:14px}
+main{padding:14px;max-width:700px;margin:auto}
+.card{background:#fff;padding:17px;border-radius:15px;margin:13px 0;box-shadow:0 3px 10px #245c3014;border:1px solid #d6edda}
+button{background:#58b96d;color:#fff;border:0;padding:14px;border-radius:10px;width:100%;font-size:15px;font-weight:bold;margin:7px 0;box-shadow:0 2px 4px #245c3020}
+button:active{background:#378d4c}
+input,textarea,select{width:100%;padding:13px;margin:7px 0;background:#f7fcf7;color:#203526;box-sizing:border-box;border:1px solid #c7e3cc;border-radius:9px;font-size:15px}
+textarea{min-height:75px}
+.voltar{background:#789b80}
+.foto{background:#edf8ef;padding:12px;border:1px solid #d2ead6;border-radius:10px;margin:10px 0}
+img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
+.item{background:#f0f9f1;padding:12px;border:1px solid #d4ead8;border-radius:10px;margin:10px 0}
+.item select{margin-bottom:4px}
+.item textarea{min-height:55px}
+.acoes{display:flex;gap:5px}
+.acoes button{flex:1}
+</style>
+</head>
+<body>
+<header>
+<h2>🚨 CHECK-LIST SOS</h2>
+<p>Controle de transporte de veículos</p>
+</header>
+<main>
+
+<div id="inicio">
+<div class="card">
+<button onclick="abrirCadastro()">👨‍🔧 CADASTRO DO GUINCHEIRO</button>
+<button onclick="abrirFotos()">📸 FOTOS</button>
+
+</div>
+<div class="card">
+<h3>📁 PASTAS DOS VEÍCULOS</h3>
+<div id="listaPastas">Nenhuma pasta criada ainda.</div>
+</div>
+</div>
+
+<div id="cadastro" style="display:none">
+<div class="card">
+<h3>Cadastro do Guincheiro</h3>
+<input id="nome" placeholder="Nome completo">
+<input id="cpf" placeholder="CPF">
+<input id="telefone" placeholder="Telefone">
+<input id="cnh" placeholder="Número da CNH">
+<input id="placa" placeholder="Placa do guincho">
+<input id="modelo" placeholder="Modelo do guincho">
+<button onclick="salvarCadastro()">💾 SALVAR CADASTRO</button>
+<button class="voltar" onclick="voltar()">VOLTAR</button>
+<p id="mensagem"></p>
+</div>
+</div>
+
+<div id="pastaVeiculo" style="display:none">
+<div class="card">
+<h3 id="tituloPasta">📁 PASTA DO VEÍCULO</h3>
+<button onclick="enviarPasta()">📲 ENVIAR FOTOS</button>
+<button onclick="editarPasta()">✏️ EDITAR REGISTRO</button>
+<button onclick="excluirPasta()">🗑️ EXCLUIR PASTA</button>
+<button class="voltar" onclick="voltar()">VOLTAR</button>
+</div>
+</div>
+
+<div id="fotos" style="display:none">
+<div class="card">
+<h3>📸 FOTOS DO VEÍCULO</h3>
+<input id="placaVeiculo" placeholder="Placa do veículo transportado" oninput="carregarFichaTransporte()">
+<h3>🚚 DADOS DO TRANSPORTE</h3>
+<input id="clienteTransporte" placeholder="Nome do cliente">
+<input id="celularCliente" placeholder="Celular do cliente" inputmode="tel">
+<input id="origemTransporte" placeholder="Onde pegou o veículo (origem)">
+<input id="destinoTransporte" placeholder="Onde vai deixar o veículo (destino)">
+<button onclick="salvarFichaTransporte()">💾 SALVAR DADOS DO TRANSPORTE</button>
+<p id="msgFicha"></p>
+<h3>✍️ ASSINATURA DO CLIENTE</h3>
+<canvas id="assinatura" width="700" height="220" style="width:100%;height:180px;background:#fff;border:2px solid #58b96d;border-radius:10px;touch-action:none"></canvas>
+<button type="button" onclick="limparAssinatura()">🧹 LIMPAR ASSINATURA</button>
+<div id="categorias"></div>
+<button onclick="salvarFotos()">💾 SALVAR REGISTRO</button>
+
+<div id="galeriaSalva"></div>
+<button class="voltar" onclick="voltar()">VOLTAR</button>
+<p id="msgFotos"></p>
+</div>
+</div>
+
+</main>
+
+<script>
+const ids=['nome','cpf','telefone','cnh','placa','modelo'];
+const tipos=['Frente do veículo','Traseira do veículo','Lado direito','Lado esquerdo','Fotos internas'];
+
+function esconder(){
+['inicio','cadastro','fotos','pastaVeiculo'].forEach(id=>document.getElementById(id).style.display='none');
+}
+function voltar(){esconder();document.getElementById('inicio').style.display='block';}
+function renderizarPastas(){
+let area=document.getElementById('listaPastas');
+let lista=JSON.parse(localStorage.getItem('registrosFotos')||'[]');
+let placas=[...new Set(lista.map(r=>r.placa).filter(Boolean))].sort();
+area.innerHTML='';
+if(!placas.length){area.innerText='Nenhuma pasta criada ainda.';return;}
+placas.forEach(placa=>{
+let total=lista.filter(r=>r.placa===placa).length;
+let botao=document.createElement('button');
+botao.textContent='📁 '+placa+' ('+total+' registro(s))';
+botao.onclick=()=>abrirPasta(placa);
+area.appendChild(botao);
+});
+}
+let placaPastaAtual='';
+function abrirPasta(placa){
+placaPastaAtual=placa;
+esconder();
+document.getElementById('tituloPasta').innerText='📁 PASTA: '+placa;
+document.getElementById('pastaVeiculo').style.display='block';
+}
+function enviarPasta(){
+let ficha=localStorage.getItem(chaveFicha(placaPastaAtual))||'{}';
+let guincheiro=localStorage.getItem('cadastroGuincheiro')||'{}';
+Android.compartilharFotos(placaPastaAtual,ficha,guincheiro);
+}
+function editarPasta(){
+document.getElementById('placaVeiculo').value=placaPastaAtual;
+abrirFotos();
+mostrarFotosSalvas();
+}
+function excluirPasta(){
+if(!confirm('Excluir a pasta '+placaPastaAtual+' e todas as fotos dessa placa?'))return;
+let total=Android.excluirFotos(placaPastaAtual);
+let lista=JSON.parse(localStorage.getItem('registrosFotos')||'[]');
+lista=lista.filter(r=>r.placa!==placaPastaAtual);
+localStorage.setItem('registrosFotos',JSON.stringify(lista));
+localStorage.removeItem(chaveFicha(placaPastaAtual));
+alert('Pasta excluída. Fotos removidas: '+total);
+placaPastaAtual='';
+renderizarPastas();
+voltar();
+}
+
+function abrirCadastro(){
+esconder();
+document.getElementById('cadastro').style.display='block';
+let d=JSON.parse(localStorage.getItem('cadastroGuincheiro')||'{}');
+ids.forEach(id=>document.getElementById(id).value=d[id]||'');
+}
+function salvarCadastro(){
+let d={};
+ids.forEach(id=>d[id]=document.getElementById(id).value.trim());
+if(!d.nome){alert('Informe o nome completo.');return;}
+localStorage.setItem('cadastroGuincheiro',JSON.stringify(d));
+document.getElementById('mensagem').innerText='Cadastro salvo com sucesso!';
+}
+
+function chaveFicha(placa){
+return 'fichaTransporte_'+placa.trim().toUpperCase();
+}
+function salvarFichaTransporte(){
+let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
+if(!placa){alert('Informe a placa do veículo primeiro.');return;}
+let ficha={
+cliente:document.getElementById('clienteTransporte').value.trim(),
+celular:document.getElementById('celularCliente').value.trim(),
+origem:document.getElementById('origemTransporte').value.trim(),
+destino:document.getElementById('destinoTransporte').value.trim(),
+assinatura:document.getElementById('assinatura').toDataURL('image/png')
+};
+localStorage.setItem(chaveFicha(placa),JSON.stringify(ficha));
+document.getElementById('msgFicha').innerText='Dados do transporte salvos para '+placa+'.';
+}
+function carregarFichaTransporte(){
+let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
+let ficha=JSON.parse(localStorage.getItem(chaveFicha(placa))||'{}');
+document.getElementById('clienteTransporte').value=ficha.cliente||'';
+document.getElementById('celularCliente').value=ficha.celular||'';
+document.getElementById('origemTransporte').value=ficha.origem||'';
+document.getElementById('destinoTransporte').value=ficha.destino||'';
+document.getElementById('msgFicha').innerText=ficha.cliente?'Dados encontrados para '+placa+'.':'';
+carregarAssinatura(ficha.assinatura||'');
+}
+let desenhando=false;
+function iniciarAssinatura(){
+const c=document.getElementById('assinatura');
+if(!c || c.dataset.pronto)return;
+c.dataset.pronto='1';
+const ctx=c.getContext('2d');
+ctx.strokeStyle='#173d24';
+ctx.lineWidth=3;
+ctx.lineCap='round';
+function pos(e){
+const r=c.getBoundingClientRect();
+return {x:(e.clientX-r.left)*c.width/r.width,y:(e.clientY-r.top)*c.height/r.height};
+}
+c.addEventListener('pointerdown',e=>{
+desenhando=true;c.setPointerCapture(e.pointerId);
+const p=pos(e);ctx.beginPath();ctx.moveTo(p.x,p.y);
+});
+c.addEventListener('pointermove',e=>{
+if(!desenhando)return;
+const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();
+});
+['pointerup','pointercancel','pointerleave'].forEach(ev=>c.addEventListener(ev,()=>desenhando=false));
+}
+function limparAssinatura(){
+const c=document.getElementById('assinatura');
+if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
+}
+function carregarAssinatura(dados){
+iniciarAssinatura();limparAssinatura();
+if(!dados)return;
+const img=new Image();
+img.onload=()=>{const c=document.getElementById('assinatura');c.getContext('2d').drawImage(img,0,0,c.width,c.height);};
+img.src=dados;
+}
+let fotosInternasAcumuladas=[];
+function abrirFotos(){
+let campoPlaca=document.getElementById('placaVeiculo');
+campoPlaca.oninput=function(){Android.setPlaca(this.value);}; campoPlaca.onblur=carregarFichaTransporte;
+Android.setPlaca(campoPlaca.value);
+carregarFichaTransporte();
+esconder();
+document.getElementById('fotos').style.display='block';
+setTimeout(iniciarAssinatura,0);
+fotosInternasAcumuladas=[];
+document.getElementById('categorias').innerHTML=tipos.map((t,i)=>`
+<div class="foto">
+<strong>${t}</strong>
+<input type="file" accept="image/*" ${i===4?'multiple':''} capture="environment" onfocus="Android.setCategoriaFoto(${i});Android.setPlaca(document.getElementById('placaVeiculo').value)" id="foto${i}" >
+<div id="preview${i}"></div>
+</div>`).join('');
+tipos.forEach((t,i)=>{
+document.getElementById('foto'+i).addEventListener('change',e=>{
+let area=document.getElementById('preview'+i);
+if(i!==4)area.innerHTML='';
+if(i===4)fotosInternasAcumuladas.push(...Array.from(e.target.files));
+let arquivos=i===4?fotosInternasAcumuladas:Array.from(e.target.files);
+if(i===4)area.innerHTML='';
+arquivos.forEach(f=>{
+let img=document.createElement('img');
+img.src=URL.createObjectURL(f);
+area.appendChild(img);
+});
+});
+});
+}
+function mostrarFotosSalvas(){
+let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
+if(!placa){alert('Informe a placa.');return;}
+let fotos=JSON.parse(Android.listarFotos(placa));
+let area=document.getElementById('galeriaSalva');
+area.innerHTML=fotos.length?fotos.map((u,i)=>'<div class="foto"><p>Foto '+(i+1)+'</p><img src="'+u+'"></div>').join(''):'Nenhuma foto encontrada.';
+}
+function enviarFotosWhatsApp(){
+let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
+if(!placa){alert('Informe a placa.');return;}
+let ficha=localStorage.getItem(chaveFicha(placa))||'{}';
+let guincheiro=localStorage.getItem('cadastroGuincheiro')||'{}';
+Android.compartilharFotos(placa,ficha,guincheiro);
+}
+function salvarFotos(){
+let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
+if(!placa){alert('Informe a placa do veículo.');return;}
+try{
+Android.setPlaca(placa);
+let total=0;
+let detalhes=tipos.map((t,i)=>{
+let campo=document.getElementById('foto'+i);
+let quantidade=i===4?fotosInternasAcumuladas.length:(campo.files?campo.files.length:0);
+total+=quantidade;
+return {tipo:t,quantidade:quantidade};
+});
+if(total===0){alert('Tire pelo menos uma foto antes de salvar.');return;}
+salvarFichaTransporte();
+let lista=JSON.parse(localStorage.getItem('registrosFotos')||'[]');
+lista.push({placa:placa,data:new Date().toLocaleString(),fotos:detalhes});
+localStorage.setItem('registrosFotos',JSON.stringify(lista));
+renderizarPastas();
+document.getElementById('placaVeiculo').value='';
+document.getElementById('clienteTransporte').value='';
+document.getElementById('celularCliente').value='';
+document.getElementById('origemTransporte').value='';
+document.getElementById('destinoTransporte').value='';
+document.getElementById('msgFicha').innerText='';
+tipos.forEach((t,i)=>{
+document.getElementById('foto'+i).value='';
+document.getElementById('preview'+i).innerHTML='';
+});
+fotosInternasAcumuladas=[];
+Android.setPlaca('');
+document.getElementById('msgFotos').innerText='Registro salvo! Pronto para outro veículo.';
+alert('Registro salvo com sucesso para '+placa+'! Campos limpos para o próximo veículo.');
+}catch(e){
+alert('Erro ao salvar: '+e.message);
+}
+}
+const itensVistoria=[
+'Para-choque dianteiro','Para-choque traseiro','Capô','Teto',
+'Porta dianteira direita','Porta dianteira esquerda',
+'Porta traseira direita','Porta traseira esquerda',
+'Retrovisor direito','Retrovisor esquerdo','Para-brisa',
+'Vidros laterais','Vidro traseiro','Faróis','Lanternas',
+'Pneus','Rodas','Interior do veículo','Painel','Bancos',
+'Chaves e acessórios'
+];
+
+function abrirChecklist(){
+esconder();
+document.getElementById('checklist').style.display='block';
+document.getElementById('dataHora').value=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+document.getElementById('itens').innerHTML=itensVistoria.map((nome,i)=>`
+<div class="item">
+<strong>${nome}</strong>
+<select id="estado${i}">
+<option value="">Selecione a condição</option>
+<option>Bom estado</option>
+<option>Avaria encontrada</option>
+<option>Não se aplica</option>
+</select>
+<textarea id="avaria${i}" placeholder="Descreva a avaria, se houver"></textarea>
+</div>`).join('');
+mostrarRegistros();
+}
+
+function salvarChecklist(){
+let dados={
+cliente:document.getElementById('cliente').value.trim(),
+telefone:document.getElementById('telefoneCliente').value.trim(),
+veiculo:document.getElementById('veiculo').value.trim(),
+placa:document.getElementById('placaCheck').value.trim().toUpperCase(),
+origem:document.getElementById('origem').value.trim(),
+destino:document.getElementById('destino').value.trim(),
+dataHora:document.getElementById('dataHora').value,
+observacoes:document.getElementById('observacoes').value,
+itens:itensVistoria.map((nome,i)=>({
+nome,
+estado:document.getElementById('estado'+i).value,
+avaria:document.getElementById('avaria'+i).value
+}))
+};
+if(!dados.cliente||!dados.veiculo||!dados.placa){
+alert('Preencha cliente, veículo e placa.');
+return;
+}
+let lista=JSON.parse(localStorage.getItem('checklists')||'[]');
+lista.push(dados);
+localStorage.setItem('checklists',JSON.stringify(lista));
+document.getElementById('msgChecklist').innerText='Check-list salvo com sucesso!';
+mostrarRegistros();
+}
+
+function mostrarRegistros(){
+let lista=JSON.parse(localStorage.getItem('checklists')||'[]');
+document.getElementById('registros').innerHTML=lista.length?lista.map((d,i)=>`
+<div class="item">
+<strong>${d.placa} - ${d.veiculo}</strong>
+<p>Cliente: ${d.cliente}</p>
+<p>${d.origem} → ${d.destino}</p>
+<div class="acoes">
+<button onclick="editarChecklist(${i})">EDITAR</button>
+<button onclick="excluirChecklist(${i})">EXCLUIR</button>
+</div>
+</div>`).join(''):'Nenhum check-list salvo.';
+}
+
+function editarChecklist(i){
+let d=JSON.parse(localStorage.getItem('checklists')||'[]')[i];
+['cliente','telefoneCliente','veiculo','placaCheck','origem','destino','dataHora','observacoes'].forEach((id,n)=>{
+let chave=['cliente','telefone','veiculo','placa','origem','destino','dataHora','observacoes'][n];
+document.getElementById(id).value=d[chave]||'';
+});
+d.itens.forEach((item,n)=>{
+document.getElementById('estado'+n).value=item.estado;
+document.getElementById('avaria'+n).value=item.avaria;
+});
+document.querySelector('#checklist .card button').onclick=()=>atualizarChecklist(i);
+document.getElementById('msgChecklist').innerText='Editando registro. Salve as alterações.';
+window.scrollTo(0,0);
+}
+
+function atualizarChecklist(i){
+let lista=JSON.parse(localStorage.getItem('checklists')||'[]');
+let d=lista[i];
+d.cliente=document.getElementById('cliente').value;
+d.telefone=document.getElementById('telefoneCliente').value;
+d.veiculo=document.getElementById('veiculo').value;
+d.placa=document.getElementById('placaCheck').value.toUpperCase();
+d.origem=document.getElementById('origem').value;
+d.destino=document.getElementById('destino').value;
+d.dataHora=document.getElementById('dataHora').value;
+d.observacoes=document.getElementById('observacoes').value;
+d.itens=itensVistoria.map((nome,n)=>({
+nome,estado:document.getElementById('estado'+n).value,
+avaria:document.getElementById('avaria'+n).value
+}));
+lista[i]=d;
+localStorage.setItem('checklists',JSON.stringify(lista));
+document.querySelector('#checklist .card button').onclick=salvarChecklist;
+document.getElementById('msgChecklist').innerText='Alterações salvas!';
+mostrarRegistros();
+}
+
+function excluirChecklist(i){
+if(!confirm('Deseja excluir este check-list?'))return;
+let lista=JSON.parse(localStorage.getItem('checklists')||'[]');
+lista.splice(i,1);
+localStorage.setItem('checklists',JSON.stringify(lista));
+mostrarRegistros();
+}
+renderizarPastas();
+
+let audioClique;
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('button, input[type="button"], input[type="submit"], select')) return;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    audioClique = audioClique || new AudioCtx();
+    if (audioClique.state === 'suspended') audioClique.resume();
+    const osc = audioClique.createOscillator();
+    const ganho = audioClique.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 950;
+    ganho.gain.setValueAtTime(0.045, audioClique.currentTime);
+    ganho.gain.exponentialRampToValueAtTime(0.001, audioClique.currentTime + 0.045);
+    osc.connect(ganho);
+    ganho.connect(audioClique.destination);
+    osc.start();
+    osc.stop(audioClique.currentTime + 0.045);
+  } catch(e) {}
+}, true);
+</script>
+</body>
+</html>
