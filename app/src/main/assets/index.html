@@ -24,29 +24,10 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 .item textarea{min-height:55px}
 .acoes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .acoes button{width:100%;min-width:0;margin:0;padding:12px 4px;font-size:13px;white-space:normal}
-</style>
+body{background:#071d40;color:#fff}header{background:#102f60;color:#fff;border-bottom:3px solid #f28b22}.card{background:#12366c;color:#fff;border:1px solid #28518a;box-shadow:0 5px 16px #0005}button{background:#f28b22;color:#fff;border-radius:14px}button:active{background:#d96e0b}input,textarea,select{background:#f4f7fc;color:#172b49;border-color:#9bb3d4}.voltar{background:#526d91}.atalhos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.atalho{min-height:145px;background:#1b447f;border:1px solid #315b96;border-radius:20px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;white-space:normal}.atalho .icone{font-size:34px;color:#ff982e;margin-bottom:8px}.atalho small{font-size:12px;color:#c7d9f5;margin-top:7px}.boasvindas{background:#173d75;border-left:5px solid #f28b22}.boasvindas p{color:#c7d9f5}.secao-titulo{font-size:21px;margin:20px 0 12px}#listaPastas button{background:#1b447f;text-align:left}</style>
 </head>
 <body>
-<header>
-<h2>🚨 CHECK-LIST SOS</h2>
-<p>Controle de transporte de veículos</p>
-</header>
-<main>
-
-<div id="inicio">
-<div class="card">
-<button onclick="abrirCadastro()">👤 CADASTRAR CLIENTE</button>
-<button onclick="abrirFotos()">📸 FOTOS</button>
-<button onclick="Android.verificarAtualizacao()">🔄 VERIFICAR ATUALIZAÇÕES</button>
-
-</div>
-<div class="card">
-<h3>📁 PASTAS DOS VEÍCULOS</h3>
-<div id="listaPastas">Nenhuma pasta criada ainda.</div>
-</div>
-</div>
-
-<div id="cadastro" style="display:none">
+<header><h2>🛡️ CHECK-LIST SOS</h2><p>Controle de transporte de veículos</p></header><main><div id="inicio"><div class="card boasvindas"><h2>Olá! Pronto para iniciar?</h2><p>Gerencie clientes, fotos e veículos em oficina.</p></div><h3 class="secao-titulo">Ações rápidas</h3><div class="atalhos"><button class="atalho" onclick="abrirCadastro()"><span class="icone">👤</span>Cadastrar Cliente<small>Novo cliente</small></button><button class="atalho" onclick="abrirFotos()"><span class="icone">📷</span>Fotos<small>Adicionar / Visualizar</small></button><button class="atalho" onclick="Android.verificarAtualizacao()"><span class="icone">🔄</span>Verificar Atualizações<small>Buscar nova versão</small></button><button class="atalho" onclick="document.getElementById(this.dataset.alvo).scrollIntoView()" data-alvo="listaPastas"><span class="icone">📁</span>Pastas dos Veículos<small>Consultar registros</small></button></div><div class="card"><h3>🟠 Dados do aplicativo</h3><p>Seus registros estão salvos neste aparelho.</p></div><div class="card"><h3>📁 PASTAS DOS VEÍCULOS</h3><div id="listaPastas">Nenhuma pasta criada ainda.</div></div></div><div id="cadastro" style="display:none">
 <div class="card">
 <h3>👤 Cadastrar Cliente</h3>
 <input id="clienteNome" placeholder="Nome completo">
