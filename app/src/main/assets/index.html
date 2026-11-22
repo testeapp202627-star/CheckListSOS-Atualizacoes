@@ -27,7 +27,7 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 body{background:#071d40;color:#fff}header{background:#102f60;color:#fff;border-bottom:3px solid #f28b22}.card{background:#12366c;color:#fff;border:1px solid #28518a;box-shadow:0 5px 16px #0005}button{background:#f28b22;color:#fff;border-radius:14px}button:active{background:#d96e0b}input,textarea,select{background:#f4f7fc;color:#172b49;border-color:#9bb3d4}.voltar{background:#526d91}.atalhos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.atalho{min-height:145px;background:#1b447f;border:1px solid #315b96;border-radius:20px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;white-space:normal}.atalho .icone{font-size:34px;color:#ff982e;margin-bottom:8px}.atalho small{font-size:12px;color:#c7d9f5;margin-top:7px}.boasvindas{background:#173d75;border-left:5px solid #f28b22}.boasvindas p{color:#c7d9f5}.secao-titulo{font-size:21px;margin:20px 0 12px}#listaPastas button{background:#1b447f;text-align:left}</style>
 </head>
 <body>
-<header><h2>🛡️ CHECK-LIST SOS</h2><p>Controle de transporte de veículos</p></header><main><div id="inicio"><div class="card boasvindas"><h2>Olá! Pronto para iniciar?</h2><p>Gerencie clientes, fotos e veículos em oficina.</p></div><h3 class="secao-titulo">Ações rápidas</h3><div class="atalhos"><button class="atalho" onclick="abrirCadastro()"><span class="icone">👤</span>Cadastrar Cliente<small>Novo cliente</small></button><button class="atalho" onclick="abrirFotos()"><span class="icone">📷</span>Fotos<small>Adicionar / Visualizar</small></button><button class="atalho" onclick="Android.verificarAtualizacao()"><span class="icone">🔄</span>Verificar Atualizações<small>Buscar nova versão</small></button><button class="atalho" onclick="abrirPastas()"><span class="icone">📁</span>Pastas dos Veículos<small>Consultar registros</small></button></div><div class="card"><h3>🟠 Dados do aplicativo</h3><p>Seus registros estão salvos neste aparelho.</p></div></div><div id="cadastro" style="display:none">
+<header><h2>🛡️ CHECK-LIST SOS</h2><p>Controle de transporte de veículos</p></header><main><div id="inicio"><div class="card boasvindas"><h2>Olá! Pronto para iniciar?</h2><p>Gerencie clientes, fotos e veículos em oficina.</p></div><h3 class="secao-titulo">Ações rápidas</h3><div class="atalhos"><button class="atalho" onclick="abrirCadastro()"><span class="icone">👤</span>Cadastrar Cliente<small>Novo cliente</small></button><button class="atalho" onclick="abrirFotos()"><span class="icone">📷</span>Fotos<small>Adicionar / Visualizar</small></button><button class="atalho" onclick="Android.verificarAtualizacao()"><span class="icone">🔄</span>Verificar Atualizações<small>Buscar nova versão</small></button><button class="atalho" onclick="abrirPastas()"><span class="icone">📁</span>Pastas dos Veículos<small>Consultar registros</small></button><button class="atalho" onclick="abrirOrdens()"><span class="icone">🧾</span>Ordens de Atendimento<small>Registrar e acompanhar</small></button></div><div class="card"><h3>🟠 Dados do aplicativo</h3><p>Seus registros estão salvos neste aparelho.</p></div></div><div id="cadastro" style="display:none">
 <div class="card">
 <h3>👤 Cadastrar Cliente</h3>
 <input id="clienteNome" placeholder="Nome completo">
@@ -76,6 +76,19 @@ body{background:#071d40;color:#fff}header{background:#102f60;color:#fff;border-b
 </div>
 </div>
 
+
+<div id="ordensAtendimento" style="display:none"><div class="card">
+<h3>🧾 ORDEM DE ATENDIMENTO</h3>
+<input id="ordemCliente" placeholder="Nome do cliente">
+<input id="ordemPlaca" placeholder="Placa do veículo">
+<textarea id="ordemServico" placeholder="Descrição do serviço / problema"></textarea>
+<select id="ordemStatus"><option>PENDENTE</option><option>NA OFICINA</option><option>ATENDIDO E LIBERADO</option></select>
+<button onclick="salvarOrdem()">💾 REGISTRAR ORDEM</button>
+<h3>📋 ORDENS REGISTRADAS</h3>
+<input id="buscaOrdem" placeholder="Pesquisar número, cliente ou placa" oninput="renderizarOrdens()">
+<div id="listaOrdens"></div>
+<button class="voltar" onclick="voltar()">VOLTAR</button>
+</div></div>
 </main>
 
 <script>
@@ -83,7 +96,7 @@ let clienteEditando = -1;
 const tipos=['Frente do veículo','Traseira do veículo','Lado direito','Lado esquerdo','Fotos internas'];
 
 function esconder(){
-['inicio','cadastro','fotos','pastaVeiculo'].forEach(id=>document.getElementById(id).style.display='none');
+['inicio','cadastro','fotos','pastaVeiculo','pastas','ordensAtendimento'].forEach(id=>document.getElementById(id).style.display='none');
 }
 function abrirPastas(){esconder();renderizarPastas();document.getElementById("pastas").style.display="block";}
 function voltar(){esconder();document.getElementById('inicio').style.display='block';}
@@ -168,7 +181,7 @@ if([d.nome,d.celular,d.veiculo,d.placa,(d.veiculos||[]).join(' '),d.endereco].jo
 let item=document.createElement('div');
 item.className='item';
 let info=document.createElement('p');
-info.textContent=d.nome+' | '+(d.celular||'Sem celular')+' | '+(d.veiculos||[d.veiculo]).filter(Boolean).join(', ')+' | Placa: '+(d.placa||'Não informada')+' | '+(d.endereco||'Sem endereço');
+info.textContent=d.nome+' | '+(d.celular||'Sem celular')+' | '+(d.veiculos||[d.veiculo]).filter(Boolean).join(', ')+' | Placa: '+(d.placa||'Não informada')+' | STATUS: '+statusAtualCliente(d)+' | '+(d.endereco||'Sem endereço');
 item.appendChild(info);
 let acoes=document.createElement('div');
 acoes.className='acoes';
@@ -204,6 +217,15 @@ let bt=document.createElement('button');bt.textContent='ABRIR PASTA DE FOTOS';bt
 }
 });
 if(encontrados===0){let p=document.createElement('p');p.textContent='Nenhum transporte encontrado para este cliente.';box.appendChild(p); }
+
+let ordens=JSON.parse(localStorage.getItem('ordensAtendimento')||'[]');
+let relacionadas=ordens.filter(o=>String(o.cliente||'').trim().toUpperCase()===String(d.nome||'').trim().toUpperCase()||placasCliente(d).some(v=>v.includes(String(o.placa||'').toUpperCase())));
+let titulo=document.createElement('h3');titulo.textContent='🧾 ORDENS DE ATENDIMENTO';box.appendChild(titulo);
+if(relacionadas.length){
+relacionadas.forEach(o=>{let p=document.createElement('p');p.textContent='Ordem Nº '+o.numero+' | '+o.placa+' | '+o.status+' | '+o.data+' | '+o.servico;box.appendChild(p);});
+}else{
+let p=document.createElement('p');p.textContent='Nenhuma ordem de atendimento encontrada.';box.appendChild(p);
+}
 let fechar=document.createElement('button');fechar.textContent='FECHAR HISTÓRICO';fechar.onclick=()=>box.remove();box.appendChild(fechar);
 area.prepend(box);
 }
@@ -223,6 +245,69 @@ lista.splice(i,1);
 localStorage.setItem('clientesSOS',JSON.stringify(lista));
 limparCadastro();
 renderizarClientes();
+}
+
+
+function abrirOrdens(){
+esconder();
+document.getElementById('ordensAtendimento').style.display='block';
+renderizarOrdens();
+}
+function salvarOrdem(){
+let cliente=document.getElementById('ordemCliente').value.trim();
+let placa=document.getElementById('ordemPlaca').value.trim().toUpperCase();
+let servico=document.getElementById('ordemServico').value.trim();
+let status=document.getElementById('ordemStatus').value;
+if(!cliente||!placa||!servico){alert('Informe cliente, placa e serviço.');return;}
+let lista=JSON.parse(localStorage.getItem('ordensAtendimento')||'[]');
+let numero=Number(localStorage.getItem('proximaOrdemAtendimento')||'1');
+lista.unshift({numero,cliente,placa,servico,status,data:new Date().toLocaleString('pt-BR')});
+localStorage.setItem('ordensAtendimento',JSON.stringify(lista));
+localStorage.setItem('proximaOrdemAtendimento',String(numero+1));
+document.getElementById('ordemCliente').value='';
+document.getElementById('ordemPlaca').value='';
+document.getElementById('ordemServico').value='';
+document.getElementById('ordemStatus').value='PENDENTE';
+renderizarOrdens();
+alert('Ordem Nº '+numero+' registrada!');
+}
+function alterarStatusOrdem(numero,status){
+let lista=JSON.parse(localStorage.getItem('ordensAtendimento')||'[]');
+let ordem=lista.find(o=>Number(o.numero)===Number(numero));
+if(!ordem)return;
+ordem.status=status;
+localStorage.setItem('ordensAtendimento',JSON.stringify(lista));
+renderizarOrdens();
+}
+function placasCliente(d){return [d.placa,d.veiculo,...(Array.isArray(d.veiculos)?d.veiculos:[])].map(v=>String(v||'').toUpperCase());}
+function statusAtualCliente(d){let placas=placasCliente(d);let lista=JSON.parse(localStorage.getItem('ordensAtendimento')||'[]');let o=lista.find(x=>{let p=String(x.placa||'').toUpperCase();return p&&placas.some(v=>v.includes(p));});return o?o.status:'SEM ORDEM';}
+function statusAtualPlaca(placa){
+if(!placa)return 'SEM ORDEM';
+let lista=JSON.parse(localStorage.getItem('ordensAtendimento')||'[]');
+let o=lista.find(x=>(x.placa||'').toUpperCase()===placa.toUpperCase());
+return o?o.status:'SEM ORDEM';
+}
+function renderizarOrdens(){
+let busca=(document.getElementById('buscaOrdem')?.value||'').toLowerCase();
+let area=document.getElementById('listaOrdens');
+if(!area)return;
+let lista=JSON.parse(localStorage.getItem('ordensAtendimento')||'[]');
+area.innerHTML='';
+let filtradas=lista.filter(o=>[o.numero,o.cliente,o.placa,o.servico,o.status].join(' ').toLowerCase().includes(busca));
+if(!filtradas.length){area.innerText='Nenhuma ordem encontrada.';return;}
+filtradas.forEach(o=>{
+let item=document.createElement('div');item.className='item';
+let h=document.createElement('h3');h.textContent='ORDEM Nº '+o.numero;item.appendChild(h);
+let p=document.createElement('p');p.textContent='Cliente: '+o.cliente+' | Placa: '+o.placa+' | Data: '+o.data;item.appendChild(p);
+let d=document.createElement('p');d.textContent='Serviço: '+o.servico;item.appendChild(d);
+let sel=document.createElement('select');
+['PENDENTE','NA OFICINA','ATENDIDO E LIBERADO'].forEach(st=>{
+let op=document.createElement('option');op.value=st;op.textContent=st;sel.appendChild(op);
+});
+sel.value=o.status||'PENDENTE';
+sel.onchange=()=>alterarStatusOrdem(o.numero,sel.value);
+item.appendChild(sel);area.appendChild(item);
+});
 }
 
 function chaveFicha(placa){
