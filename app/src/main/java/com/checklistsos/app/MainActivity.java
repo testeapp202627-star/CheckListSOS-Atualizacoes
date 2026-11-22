@@ -25,6 +25,17 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import android.widget.Toast;
+import android.app.AlertDialog;
+import android.os.Build;
+import android.provider.Settings;
+import android.content.pm.PackageManager;
+import android.os.Handler;
+import android.os.Looper;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.FileInputStream;
 
 public class MainActivity extends Activity {
     private ValueCallback<Uri[]> uploadMessage;
@@ -42,6 +53,15 @@ public class MainActivity extends Activity {
 
     public class Ponte {
         @JavascriptInterface
+        public void compartilharCliente(String dados) {
+            Intent enviar = new Intent(Intent.ACTION_SEND);
+            enviar.setType("text/plain");
+            enviar.putExtra(Intent.EXTRA_SUBJECT, "Cadastro de cliente - Check-list SOS");
+            enviar.putExtra(Intent.EXTRA_TEXT, dados == null ? "" : dados);
+            runOnUiThread(() -> startActivity(Intent.createChooser(enviar, "Compartilhar cadastro do cliente")));
+        }
+
+        @JavascriptInterface
         public void setCategoriaFoto(int indice) {
             categoriaInterna = (indice == 4);
         }
@@ -50,6 +70,143 @@ public class MainActivity extends Activity {
         public void setPlaca(String placa) {
             placaAtual = (placa == null ? "" : placa.trim().toUpperCase(java.util.Locale.ROOT)).replaceAll("[^A-Z0-9_-]", "_");
             if (placaAtual.isEmpty()) placaAtual = "SEM_PLACA";
+        }
+
+
+        @JavascriptInterface
+        public void verificarAtualizacao() {
+            verificarAtualizacao(true);
+        }
+
+        public void verificarAtualizacao(boolean mostrarMensagem) {
+            new Thread(() -> {
+                HttpURLConnection conexao = null;
+                try {
+                    URL url = new URL("https://api.github.com/repos/testeapp202627-star/CheckListSOS-Atualizacoes/releases/latest");
+                    conexao = (HttpURLConnection) url.openConnection();
+                    conexao.setRequestProperty("Accept", "application/vnd.github+json");
+                    conexao.setRequestProperty("User-Agent", "CheckListSOS");
+                    conexao.setConnectTimeout(15000);
+                    conexao.setReadTimeout(15000);
+
+                    StringBuilder resposta = new StringBuilder();
+                    try (BufferedReader leitor = new BufferedReader(
+                            new InputStreamReader(conexao.getInputStream(), StandardCharsets.UTF_8))) {
+                        String linha;
+                        while ((linha = leitor.readLine()) != null) resposta.append(linha);
+                    }
+
+                    JSONObject release = new JSONObject(resposta.toString());
+                    String versao = release.optString("tag_name", "");
+                    JSONArray assets = release.optJSONArray("assets");
+                    String link = "";
+
+                    if (assets != null) {
+                        for (int i = 0; i < assets.length(); i++) {
+                            JSONObject asset = assets.getJSONObject(i);
+                            String nome = asset.optString("name", "");
+                            if (nome.toLowerCase(java.util.Locale.ROOT).endsWith(".apk")) {
+                                link = asset.optString("browser_download_url", "");
+                                break;
+                            }
+                        }
+                    }
+
+                    if (versao.isEmpty() || link.isEmpty())
+                        throw new Exception("APK não encontrado na publicação.");
+
+                    String instalada = getPackageManager()
+                            .getPackageInfo(getPackageName(), 0).versionName;
+
+                    if (!versaoMaior(versao, instalada)) {
+                        if (mostrarMensagem) {
+                            runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                                    "Você já está usando a versão mais recente.",
+                                    Toast.LENGTH_LONG).show());
+                        }
+                    } else {
+                        String linkFinal = link;
+                        runOnUiThread(() -> new AlertDialog.Builder(MainActivity.this)
+                                .setTitle("Atualização disponível")
+                                .setMessage("Nova versão: " + versao + "\nDeseja baixar e instalar?")
+                                .setNegativeButton("Depois", null)
+                                .setPositiveButton("Baixar e instalar",
+                                        (dialog, which) -> baixarEInstalar(linkFinal))
+                                .show());
+                    }
+                } catch (Exception e) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                            "Erro ao verificar atualização: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show());
+                } finally {
+                    if (conexao != null) conexao.disconnect();
+                }
+            }).start();
+        }
+
+        private boolean versaoMaior(String nova, String atual) {
+            String[] a = nova.replaceFirst("^[vV]", "").split("\\.");
+            String[] b = atual.replaceFirst("^[vV]", "").split("\\.");
+            for (int i = 0; i < Math.max(a.length, b.length); i++) {
+                int x = i < a.length ? Integer.parseInt(a[i]) : 0;
+                int y = i < b.length ? Integer.parseInt(b[i]) : 0;
+                if (x != y) return x > y;
+            }
+            return false;
+        }
+
+        private void baixarEInstalar(String link) {
+            new Thread(() -> {
+                try {
+                    HttpURLConnection conexao = (HttpURLConnection)
+                            new URL(link).openConnection();
+                    conexao.setConnectTimeout(20000);
+                    conexao.setReadTimeout(30000);
+
+                    File pasta = new File(getCacheDir(), "updates");
+                    if (!pasta.exists() && !pasta.mkdirs())
+                        throw new Exception("Não foi possível criar a pasta.");
+
+                    File apk = new File(pasta, "CheckListSOS.apk");
+                    try (InputStream entrada = conexao.getInputStream();
+                         FileOutputStream saida = new FileOutputStream(apk)) {
+                        byte[] buffer = new byte[8192];
+                        int quantidade;
+                        while ((quantidade = entrada.read(buffer)) != -1)
+                            saida.write(buffer, 0, quantidade);
+                    } finally {
+                        conexao.disconnect();
+                    }
+
+                    runOnUiThread(() -> instalarApk(apk));
+                } catch (Exception e) {
+                    runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                            "Erro ao baixar APK: " + e.getMessage(),
+                            Toast.LENGTH_LONG).show());
+                }
+            }).start();
+        }
+
+        private void instalarApk(File apk) {
+            if (Build.VERSION.SDK_INT >= 26 &&
+                    !getPackageManager().canRequestPackageInstalls()) {
+                Intent configuracao = new Intent(
+                        Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                        Uri.parse("package:" + getPackageName()));
+                startActivity(configuracao);
+                Toast.makeText(MainActivity.this,
+                        "Autorize a instalação e toque em verificar atualização novamente.",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+
+            Uri uri = FileProvider.getUriForFile(MainActivity.this,
+                    getPackageName() + ".fileprovider", apk);
+            Intent instalar = new Intent(Intent.ACTION_VIEW);
+            instalar.setDataAndType(uri, "application/vnd.android.package-archive");
+            instalar.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                    Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(instalar);
         }
 
         @JavascriptInterface
@@ -214,6 +371,7 @@ settings.setDisplayZoomControls(false);
 
         setContentView(web);
         web.loadUrl("file:///android_asset/index.html");
+        new Ponte().verificarAtualizacao(false);
     }
 
     private void abrirCameraSOS() throws Exception {

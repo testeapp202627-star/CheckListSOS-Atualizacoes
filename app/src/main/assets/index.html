@@ -51,13 +51,13 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 <h3>👤 Cadastrar Cliente</h3>
 <input id="clienteNome" placeholder="Nome completo">
 <input id="clienteCelular" placeholder="Celular" inputmode="tel">
-<input id="clienteVeiculo" placeholder="Veículo e placa">
+<textarea id="clienteVeiculo" placeholder="Veículos cadastrados (um por linha)"></textarea><input id="clientePlaca" placeholder="Placa principal"><input id="clienteEndereco" placeholder="Endereço completo">
 <button onclick="salvarCadastro()">💾 SALVAR CLIENTE</button>
 <button class="voltar" onclick="limparCadastro()">NOVO CADASTRO</button>
 <button class="voltar" onclick="voltar()">VOLTAR</button>
 <p id="mensagem"></p>
 <h3>📋 Clientes cadastrados</h3>
-<div id="listaClientes"></div>
+<input id="buscaCliente" placeholder="Pesquisar nome, celular ou placa" oninput="renderizarClientes()"><div id="listaClientes"></div>
 </div>
 </div>
 
@@ -76,7 +76,7 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 <h3>📸 FOTOS DO VEÍCULO</h3>
 <input id="placaVeiculo" placeholder="Placa do veículo transportado" oninput="carregarFichaTransporte()">
 <h3>🚚 DADOS DO TRANSPORTE</h3>
-<input id="clienteTransporte" placeholder="Nome do cliente">
+<select id="clienteSelecionado" onchange="selecionarClienteTransporte()"><option value="">Selecionar cliente cadastrado</option></select><input id="clienteTransporte" placeholder="Nome do cliente">
 <input id="celularCliente" placeholder="Celular do cliente" inputmode="tel">
 <input id="origemTransporte" placeholder="Onde pegou o veículo (origem)">
 <input id="destinoTransporte" placeholder="Onde vai deixar o veículo (destino)">
@@ -156,14 +156,14 @@ renderizarClientes();
 }
 function limparCadastro(){
 clienteEditando=-1;
-['clienteNome','clienteCelular','clienteVeiculo'].forEach(id=>document.getElementById(id).value='');
+['clienteNome','clienteCelular','clienteVeiculo','clientePlaca','clienteEndereco'].forEach(id=>document.getElementById(id).value='');
 document.getElementById('mensagem').innerText='';
 }
 function salvarCadastro(){
 let d={
 nome:document.getElementById('clienteNome').value.trim(),
 celular:document.getElementById('clienteCelular').value.trim(),
-veiculo:document.getElementById('clienteVeiculo').value.trim()
+veiculo:document.getElementById('clienteVeiculo').value.trim(), veiculos:document.getElementById('clienteVeiculo').value.split('\n').map(v=>v.trim()).filter(Boolean), placa:document.getElementById('clientePlaca').value.trim().toUpperCase(), endereco:document.getElementById('clienteEndereco').value.trim()
 };
 if(!d.nome){alert('Informe o nome do cliente.');return;}
 let lista=JSON.parse(localStorage.getItem('clientesSOS')||'[]');
@@ -175,35 +175,61 @@ limparCadastro();
 renderizarClientes();
 }
 function renderizarClientes(){
+let busca=(document.getElementById("buscaCliente")?.value||"").toLowerCase();
 let lista=JSON.parse(localStorage.getItem('clientesSOS')||'[]');
 let area=document.getElementById('listaClientes');
 area.innerHTML='';
 if(!lista.length){area.innerText='Nenhum cliente cadastrado.';return;}
 lista.forEach((d,i)=>{
+if([d.nome,d.celular,d.veiculo,d.placa,(d.veiculos||[]).join(' '),d.endereco].join(" ").toLowerCase().includes(busca)==false)return;
 let item=document.createElement('div');
 item.className='item';
 let info=document.createElement('p');
-info.textContent=d.nome+' | '+(d.celular||'Sem celular')+' | '+(d.veiculo||'Sem veículo');
+info.textContent=d.nome+' | '+(d.celular||'Sem celular')+' | '+(d.veiculos||[d.veiculo]).filter(Boolean).join(', ')+' | Placa: '+(d.placa||'Não informada')+' | '+(d.endereco||'Sem endereço');
 item.appendChild(info);
 let acoes=document.createElement('div');
 acoes.className='acoes';
 let editar=document.createElement('button');
 editar.textContent='EDITAR';
 editar.onclick=()=>editarCliente(i);
+let historico=document.createElement('button');historico.textContent='HISTÓRICO';historico.onclick=()=>historicoCliente(i);
 let excluir=document.createElement('button');
 excluir.textContent='EXCLUIR';
 excluir.onclick=()=>excluirCliente(i);
-acoes.append(editar,excluir);
+let compartilhar=document.createElement('button');compartilhar.textContent='COMPARTILHAR';compartilhar.onclick=()=>compartilharCadastroCliente(i); acoes.append(editar,historico,compartilhar,excluir);
 item.appendChild(acoes);
 area.appendChild(item);
 });
+}
+function compartilharCadastroCliente(i){let d=JSON.parse(localStorage.getItem('clientesSOS')||'[]')[i];if(d==null)return;let texto='CADASTRO DE CLIENTE\nNome: '+(d.nome||'')+'\nCelular: '+(d.celular||'')+'\nVeículos: '+((d.veiculos||[d.veiculo||'']).filter(Boolean).join(', '))+'\nPlaca: '+(d.placa||'')+'\nEndereço: '+(d.endereco||'')+'\n\nHISTÓRICO DE TRANSPORTES\n';let regs=JSON.parse(localStorage.getItem('registrosFotos')||'[]');let total=0;regs.forEach(r=>{let ficha=JSON.parse(localStorage.getItem(chaveFicha(r.placa))||'{}');if(String(ficha.clienteId)===String(i)||ficha.cliente===d.nome||(d.celular&&ficha.celular===d.celular)){total++;texto+='Placa: '+r.placa+' | Data: '+r.data+'\nOrigem: '+(ficha.origem||'')+' | Destino: '+(ficha.destino||'')+'\n';}});if(total===0)texto+='Nenhum transporte registrado.\n';if(window.Android&&Android.compartilharCliente)Android.compartilharCliente(texto);else if(navigator.share)navigator.share({text:texto});else alert(texto);}
+function historicoCliente(i){
+let clientes=JSON.parse(localStorage.getItem('clientesSOS')||'[]');
+let d=clientes[i];if(d==null)return;let regs=JSON.parse(localStorage.getItem('registrosFotos')||'[]');
+let area=document.getElementById('listaClientes');
+let box=document.createElement('div');box.className='item';
+let h=document.createElement('h3');h.textContent='HISTÓRICO - '+d.nome;box.appendChild(h);
+let encontrados=0;
+regs.forEach(r=>{
+let ficha=JSON.parse(localStorage.getItem(chaveFicha(r.placa))||'{}');
+let placa=(r.placa||'').toUpperCase();
+let veiculos=[...(d.veiculos||[]),d.veiculo||'',d.placa||''].join(' ').toUpperCase();
+if(String(ficha.clienteId)===String(i)||ficha.cliente===d.nome||(d.celular&&ficha.celular===d.celular)||(veiculos&&veiculos.includes(placa))){
+encontrados++;
+let p=document.createElement('p');p.textContent='Placa: '+placa+' | Data: '+r.data;box.appendChild(p);
+let rota=document.createElement('p');rota.textContent='Origem: '+(ficha.origem||'Não informada')+' | Destino: '+(ficha.destino||'Não informado');box.appendChild(rota);
+let bt=document.createElement('button');bt.textContent='ABRIR PASTA DE FOTOS';bt.onclick=()=>abrirPasta(placa);box.appendChild(bt);
+}
+});
+if(encontrados===0){let p=document.createElement('p');p.textContent='Nenhum transporte encontrado para este cliente.';box.appendChild(p); }
+let fechar=document.createElement('button');fechar.textContent='FECHAR HISTÓRICO';fechar.onclick=()=>box.remove();box.appendChild(fechar);
+area.prepend(box);
 }
 function editarCliente(i){
 let d=JSON.parse(localStorage.getItem('clientesSOS')||'[]')[i];
 clienteEditando=i;
 document.getElementById('clienteNome').value=d.nome||'';
 document.getElementById('clienteCelular').value=d.celular||'';
-document.getElementById('clienteVeiculo').value=d.veiculo||'';
+document.getElementById('clienteVeiculo').value=(d.veiculos||[d.veiculo||'']).join('\n');document.getElementById('clientePlaca').value=d.placa||'';document.getElementById('clienteEndereco').value=d.endereco||'';
 document.getElementById('mensagem').innerText='Editando cliente. Salve para atualizar.';
 window.scrollTo(0,0);
 }
@@ -222,7 +248,7 @@ return 'fichaTransporte_'+placa.trim().toUpperCase();
 function salvarFichaTransporte(){
 let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
 if(!placa){alert('Informe a placa do veículo primeiro.');return;}
-let ficha={
+let ficha={clienteId:document.getElementById("clienteSelecionado").value, enderecoCliente:(JSON.parse(localStorage.getItem("clientesSOS")||"[]")[document.getElementById("clienteSelecionado").value]||{}).endereco||"",
 cliente:document.getElementById('clienteTransporte').value.trim(),
 celular:document.getElementById('celularCliente').value.trim(),
 origem:document.getElementById('origemTransporte').value.trim(),
@@ -234,7 +260,7 @@ document.getElementById('msgFicha').innerText='Dados do transporte salvos para '
 }
 function carregarFichaTransporte(){
 let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
-let ficha=JSON.parse(localStorage.getItem(chaveFicha(placa))||'{}');
+let ficha=JSON.parse(localStorage.getItem(chaveFicha(placa))||'{}');document.getElementById("clienteSelecionado").value=ficha.clienteId||"";
 document.getElementById('clienteTransporte').value=ficha.cliente||'';
 document.getElementById('celularCliente').value=ficha.celular||'';
 document.getElementById('origemTransporte').value=ficha.origem||'';
@@ -277,7 +303,7 @@ img.onload=()=>{const c=document.getElementById('assinatura');c.getContext('2d')
 img.src=dados;
 }
 let fotosInternasAcumuladas=[];
-function abrirFotos(){
+function atualizarClientesTransporte(){let sel=document.getElementById("clienteSelecionado");let lista=JSON.parse(localStorage.getItem("clientesSOS")||"[]");sel.innerHTML="";let op=document.createElement("option");op.value="";op.textContent="Selecionar cliente cadastrado";sel.appendChild(op);lista.forEach((c,i)=>{let o=document.createElement("option");o.value=i;o.textContent=c.nome+" - "+(c.celular||"Sem celular");sel.appendChild(o);});} function selecionarClienteTransporte(){let i=document.getElementById("clienteSelecionado").value;let c=JSON.parse(localStorage.getItem("clientesSOS")||"[]")[i];if(!c)return;document.getElementById("clienteTransporte").value=c.nome||"";document.getElementById("celularCliente").value=c.celular||"";} function abrirFotos(){atualizarClientesTransporte();
 let campoPlaca=document.getElementById('placaVeiculo');
 campoPlaca.oninput=function(){Android.setPlaca(this.value);}; campoPlaca.onblur=carregarFichaTransporte;
 Android.setPlaca(campoPlaca.value);
