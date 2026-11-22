@@ -1,6 +1,10 @@
 package com.checklistsos.app;
 
 import android.app.Activity;
+import android.content.Context;
+import android.print.PrintManager;
+import android.print.PrintAttributes;
+import android.webkit.WebViewClient;
 import android.os.Bundle;
 import android.webkit.WebView;
 import android.webkit.WebSettings;
@@ -43,6 +47,7 @@ public class MainActivity extends Activity {
     private final ArrayList<Uri> fotosCapturadas = new ArrayList<>();
     private volatile boolean categoriaInterna = false;
     private volatile String placaAtual = "SEM_PLACA";
+    private WebView webViewImpressao;
     private String pastaDaPlaca(String placa) {
         String nome = (placa == null ? "" : placa.trim().toUpperCase(java.util.Locale.ROOT))
             .replaceAll("[^A-Z0-9_-]", "_");
@@ -50,6 +55,23 @@ public class MainActivity extends Activity {
         return Environment.DIRECTORY_PICTURES + "/CheckListSOS/" + nome + "/";
     }
 
+
+    private void imprimirHtmlOrdem(String html) {
+        if (Build.VERSION.SDK_INT < 19) {
+            Toast.makeText(this, "Impressão não disponível nesta versão do Android", Toast.LENGTH_LONG).show();
+            return;
+        }
+        webViewImpressao = new WebView(this);
+        webViewImpressao.getSettings().setJavaScriptEnabled(false);
+        webViewImpressao.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                PrintManager gerente = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+                gerente.print("Ordem de Serviço", view.createPrintDocumentAdapter("Ordem de Serviço"), new PrintAttributes.Builder().build());
+            }
+        });
+        webViewImpressao.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null);
+    }
 
     public class Ponte {
         @JavascriptInterface
@@ -62,7 +84,13 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void setCategoriaFoto(int indice) {
+
+            public void imprimirOrdem(String html) {
+                runOnUiThread(() -> imprimirHtmlOrdem(html == null ? "" : html));
+            }
+
+            @JavascriptInterface
+            public void setCategoriaFoto(int indice) {
             categoriaInterna = (indice == 4);
         }
 

@@ -306,8 +306,38 @@ let op=document.createElement('option');op.value=st;op.textContent=st;sel.append
 });
 sel.value=o.status||'PENDENTE';
 sel.onchange=()=>alterarStatusOrdem(o.numero,sel.value);
-item.appendChild(sel);area.appendChild(item);
+item.appendChild(sel);let bt=document.createElement("button");bt.textContent="IMPRIMIR ORDEM";bt.onclick=()=>imprimirOrdem(o);item.appendChild(bt);area.appendChild(item);
 });
+}
+
+
+function imprimirOrdem(o){
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><style>
+@page{size:A4;margin:18mm}
+body{font-family:Arial,sans-serif;color:#111;font-size:12pt}
+h1{text-align:center;font-size:22pt}
+h2{font-size:14pt;border-bottom:1px solid #333;padding-bottom:5px}
+.topo{text-align:center;margin-bottom:28px}
+.linha{margin:15px 0;border-bottom:1px solid #777;padding:8px 0}
+.servico{border:1px solid #333;min-height:130px;padding:12px;white-space:pre-wrap}
+.assinaturas{display:flex;gap:35px;margin-top:75px}
+.assinatura{flex:1;text-align:center;border-top:1px solid #111;padding-top:8px}
+</style></head><body>
+<div class="topo"><h1>ORDEM DE SERVIÇO</h1><strong>CHECK-LIST SOS</strong></div>
+<h2>IDENTIFICAÇÃO</h2>
+<div class="linha"><b>Ordem Nº:</b> ${esc(o.numero)} | <b>Data:</b> ${esc(o.data)}</div>
+<div class="linha"><b>Cliente:</b> ${esc(o.cliente)}</div>
+<div class="linha"><b>Placa:</b> ${esc(o.placa)}</div>
+<div class="linha"><b>Status:</b> ${esc(o.status||"PENDENTE")}</div>
+<h2>DESCRIÇÃO DO SERVIÇO</h2>
+<div class="servico">${esc(o.servico)}</div>
+<h2>OBSERVAÇÕES / DIAGNÓSTICO</h2>
+<div class="servico"></div>
+<div class="assinaturas"><div class="assinatura">Responsável pelo serviço</div><div class="assinatura">Assinatura do cliente</div></div>
+</body></html>`;
+if(window.Android&&Android.imprimirOrdem)Android.imprimirOrdem(html);
+else{let w=window.open("","_blank");if(w){w.document.write(html);w.document.close();w.print();}}
 }
 
 function chaveFicha(placa){
