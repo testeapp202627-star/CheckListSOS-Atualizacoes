@@ -74,13 +74,13 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 <div id="fotos" style="display:none">
 <div class="card">
 <h3>📸 FOTOS DO VEÍCULO</h3>
-<input id="placaVeiculo" placeholder="Placa do veículo transportado" oninput="carregarFichaTransporte()">
-<h3>🚚 DADOS DO TRANSPORTE</h3>
+<input id="placaVeiculo" placeholder="Placa do veículo em oficina" oninput="carregarFichaTransporte()">
+<h3>🚗 DADOS DO VEÍCULO</h3>
 <select id="clienteSelecionado" onchange="selecionarClienteTransporte()"><option value="">Selecionar cliente cadastrado</option></select><input id="clienteTransporte" placeholder="Nome do cliente">
 <input id="celularCliente" placeholder="Celular do cliente" inputmode="tel">
-<input id="origemTransporte" placeholder="Onde pegou o veículo (origem)">
-<input id="destinoTransporte" placeholder="Onde vai deixar o veículo (destino)">
-<button onclick="salvarFichaTransporte()">💾 SALVAR DADOS DO TRANSPORTE</button>
+
+
+<button onclick="salvarFichaTransporte()">💾 SALVAR DADOS DO VEÍCULO</button>
 <p id="msgFicha"></p>
 <h3>✍️ ASSINATURA DO CLIENTE</h3>
 <canvas id="assinatura" width="700" height="220" style="width:100%;height:180px;background:#fff;border:2px solid #58b96d;border-radius:10px;touch-action:none"></canvas>
@@ -251,20 +251,20 @@ if(!placa){alert('Informe a placa do veículo primeiro.');return;}
 let ficha={clienteId:document.getElementById("clienteSelecionado").value, enderecoCliente:(JSON.parse(localStorage.getItem("clientesSOS")||"[]")[document.getElementById("clienteSelecionado").value]||{}).endereco||"",
 cliente:document.getElementById('clienteTransporte').value.trim(),
 celular:document.getElementById('celularCliente').value.trim(),
-origem:document.getElementById('origemTransporte').value.trim(),
-destino:document.getElementById('destinoTransporte').value.trim(),
+
+
 assinatura:document.getElementById('assinatura').toDataURL('image/png')
 };
 localStorage.setItem(chaveFicha(placa),JSON.stringify(ficha));
-document.getElementById('msgFicha').innerText='Dados do transporte salvos para '+placa+'.';
+document.getElementById('msgFicha').innerText='Dados do veículo salvos para '+placa+'.';
 }
 function carregarFichaTransporte(){
 let placa=document.getElementById('placaVeiculo').value.trim().toUpperCase();
 let ficha=JSON.parse(localStorage.getItem(chaveFicha(placa))||'{}');document.getElementById("clienteSelecionado").value=ficha.clienteId||"";
 document.getElementById('clienteTransporte').value=ficha.cliente||'';
 document.getElementById('celularCliente').value=ficha.celular||'';
-document.getElementById('origemTransporte').value=ficha.origem||'';
-document.getElementById('destinoTransporte').value=ficha.destino||'';
+
+
 document.getElementById('msgFicha').innerText=ficha.cliente?'Dados encontrados para '+placa+'.':'';
 carregarAssinatura(ficha.assinatura||'');
 }
@@ -368,8 +368,8 @@ renderizarPastas();
 document.getElementById('placaVeiculo').value='';
 document.getElementById('clienteTransporte').value='';
 document.getElementById('celularCliente').value='';
-document.getElementById('origemTransporte').value='';
-document.getElementById('destinoTransporte').value='';
+
+
 document.getElementById('msgFicha').innerText='';
 tipos.forEach((t,i)=>{
 document.getElementById('foto'+i).value='';
