@@ -35,8 +35,9 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 
 <div id="inicio">
 <div class="card">
-<button onclick="abrirCadastro()">👨‍🔧 CADASTRO DO GUINCHEIRO</button>
+<button onclick="abrirCadastro()">👤 CADASTRAR CLIENTE</button>
 <button onclick="abrirFotos()">📸 FOTOS</button>
+<button onclick="Android.verificarAtualizacao()">🔄 VERIFICAR ATUALIZAÇÕES</button>
 
 </div>
 <div class="card">
@@ -47,16 +48,16 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 
 <div id="cadastro" style="display:none">
 <div class="card">
-<h3>Cadastro do Guincheiro</h3>
-<input id="nome" placeholder="Nome completo">
-<input id="cpf" placeholder="CPF">
-<input id="telefone" placeholder="Telefone">
-<input id="cnh" placeholder="Número da CNH">
-<input id="placa" placeholder="Placa do guincho">
-<input id="modelo" placeholder="Modelo do guincho">
-<button onclick="salvarCadastro()">💾 SALVAR CADASTRO</button>
+<h3>👤 Cadastrar Cliente</h3>
+<input id="clienteNome" placeholder="Nome completo">
+<input id="clienteCelular" placeholder="Celular" inputmode="tel">
+<input id="clienteVeiculo" placeholder="Veículo e placa">
+<button onclick="salvarCadastro()">💾 SALVAR CLIENTE</button>
+<button class="voltar" onclick="limparCadastro()">NOVO CADASTRO</button>
 <button class="voltar" onclick="voltar()">VOLTAR</button>
 <p id="mensagem"></p>
+<h3>📋 Clientes cadastrados</h3>
+<div id="listaClientes"></div>
 </div>
 </div>
 
@@ -96,7 +97,7 @@ img{width:100%;max-height:220px;object-fit:contain;margin-top:8px}
 </main>
 
 <script>
-const ids=['nome','cpf','telefone','cnh','placa','modelo'];
+let clienteEditando = -1;
 const tipos=['Frente do veículo','Traseira do veículo','Lado direito','Lado esquerdo','Fotos internas'];
 
 function esconder(){
@@ -150,15 +151,69 @@ voltar();
 function abrirCadastro(){
 esconder();
 document.getElementById('cadastro').style.display='block';
-let d=JSON.parse(localStorage.getItem('cadastroGuincheiro')||'{}');
-ids.forEach(id=>document.getElementById(id).value=d[id]||'');
+limparCadastro();
+renderizarClientes();
+}
+function limparCadastro(){
+clienteEditando=-1;
+['clienteNome','clienteCelular','clienteVeiculo'].forEach(id=>document.getElementById(id).value='');
+document.getElementById('mensagem').innerText='';
 }
 function salvarCadastro(){
-let d={};
-ids.forEach(id=>d[id]=document.getElementById(id).value.trim());
-if(!d.nome){alert('Informe o nome completo.');return;}
-localStorage.setItem('cadastroGuincheiro',JSON.stringify(d));
-document.getElementById('mensagem').innerText='Cadastro salvo com sucesso!';
+let d={
+nome:document.getElementById('clienteNome').value.trim(),
+celular:document.getElementById('clienteCelular').value.trim(),
+veiculo:document.getElementById('clienteVeiculo').value.trim()
+};
+if(!d.nome){alert('Informe o nome do cliente.');return;}
+let lista=JSON.parse(localStorage.getItem('clientesSOS')||'[]');
+if(clienteEditando>=0) lista[clienteEditando]=d;
+else lista.push(d);
+localStorage.setItem('clientesSOS',JSON.stringify(lista));
+document.getElementById('mensagem').innerText='Cliente salvo com sucesso!';
+limparCadastro();
+renderizarClientes();
+}
+function renderizarClientes(){
+let lista=JSON.parse(localStorage.getItem('clientesSOS')||'[]');
+let area=document.getElementById('listaClientes');
+area.innerHTML='';
+if(!lista.length){area.innerText='Nenhum cliente cadastrado.';return;}
+lista.forEach((d,i)=>{
+let item=document.createElement('div');
+item.className='item';
+let info=document.createElement('p');
+info.textContent=d.nome+' | '+(d.celular||'Sem celular')+' | '+(d.veiculo||'Sem veículo');
+item.appendChild(info);
+let acoes=document.createElement('div');
+acoes.className='acoes';
+let editar=document.createElement('button');
+editar.textContent='EDITAR';
+editar.onclick=()=>editarCliente(i);
+let excluir=document.createElement('button');
+excluir.textContent='EXCLUIR';
+excluir.onclick=()=>excluirCliente(i);
+acoes.append(editar,excluir);
+item.appendChild(acoes);
+area.appendChild(item);
+});
+}
+function editarCliente(i){
+let d=JSON.parse(localStorage.getItem('clientesSOS')||'[]')[i];
+clienteEditando=i;
+document.getElementById('clienteNome').value=d.nome||'';
+document.getElementById('clienteCelular').value=d.celular||'';
+document.getElementById('clienteVeiculo').value=d.veiculo||'';
+document.getElementById('mensagem').innerText='Editando cliente. Salve para atualizar.';
+window.scrollTo(0,0);
+}
+function excluirCliente(i){
+if(!confirm('Deseja excluir este cliente?'))return;
+let lista=JSON.parse(localStorage.getItem('clientesSOS')||'[]');
+lista.splice(i,1);
+localStorage.setItem('clientesSOS',JSON.stringify(lista));
+limparCadastro();
+renderizarClientes();
 }
 
 function chaveFicha(placa){
